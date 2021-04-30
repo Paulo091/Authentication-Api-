@@ -1,4 +1,5 @@
-﻿using AuthenticationApi.ViewModels;
+﻿using AuthenticationApi.Models;
+using AuthenticationApi.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -13,10 +14,12 @@ namespace AuthenticationApi.Controllers
     public class AccountController : ControllerBase
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly SignInManager<IdentityUser> _signInManager;
 
-        public AccountController( UserManager<IdentityUser> userManager)
+        public AccountController( UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
         }
 
         [HttpPost("Register")]
@@ -51,9 +54,40 @@ namespace AuthenticationApi.Controllers
         }
 
         [HttpPost("Login")]
-        public async Task<object> Login()
+        public async Task<object> Login(LoginViewModel user)
         {
-            return "";
+            try
+            {
+                var LoginUser = new IdentityUser
+                {
+                    UserName = user.Email,
+                    Email = user.Email
+                };
+                var result = await _signInManager.PasswordSignInAsync(user.Email,user.Password,true,false);
+
+                if (result.Succeeded)
+                {
+                    var response = new DefaultResponse<string>
+                    {
+                        Success = true,
+                        Data = "Success",
+                    };
+                    return response;
+                }
+                else
+                {
+                    var response = new DefaultResponse<string>
+                    {
+                        Success = false,
+                        Data = "Invalid Credentials",                        
+                    };
+                    return Unauthorized(response);
+                }
+            }
+            catch(Exception e)
+            {
+                return e.Message;
+            }            
         }
 
     }
