@@ -1,4 +1,5 @@
-﻿using AuthenticationApi.Settings;
+﻿using AuthenticationApi.Models;
+using AuthenticationApi.Settings;
 using AuthenticationApi.ViewModels;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -13,7 +14,7 @@ namespace AuthenticationApi.Services
 {
     public class TokenService
     {
-        public static string GenerateToken(LoginViewModel user)
+        public static string GenerateToken(ApplicationUser user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(SecretKeyJWT.SecretKey);
@@ -22,12 +23,15 @@ namespace AuthenticationApi.Services
             {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, user.Email.ToString()),
-                    new Claim(ClaimTypes.Role, "")
+                    new Claim(ClaimTypes.Name, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddMinutes(5),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
             };
-                   
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
     }
 }

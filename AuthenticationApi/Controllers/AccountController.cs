@@ -1,4 +1,6 @@
 ﻿using AuthenticationApi.Models;
+using AuthenticationApi.Models.RequestResponses;
+using AuthenticationApi.Services;
 using AuthenticationApi.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +15,10 @@ namespace AuthenticationApi.Controllers
     [ApiController]
     public class AccountController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountController( UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public AccountController( UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -28,13 +30,14 @@ namespace AuthenticationApi.Controllers
             var msg = "";
             if (ModelState.IsValid)
             {
-                var identityUser = new IdentityUser() 
+                var applicationUser = new ApplicationUser() 
                 { 
                     UserName = user.Email,
-                    Email = user.Email                   
+                    Email = user.Email,
+                    Role = user.Role
                 };
 
-                var createUserResult = await _userManager.CreateAsync(identityUser, user.Password);
+                var createUserResult = await _userManager.CreateAsync(applicationUser, user.Password);
 
                 if (createUserResult.Succeeded)
                     return "Success";
@@ -58,7 +61,7 @@ namespace AuthenticationApi.Controllers
         {
             try
             {
-                var LoginUser = new IdentityUser
+                var LoginUser = new ApplicationUser
                 {
                     UserName = user.Email,
                     Email = user.Email
@@ -67,10 +70,15 @@ namespace AuthenticationApi.Controllers
 
                 if (result.Succeeded)
                 {
-                    var response = new DefaultResponse<string>
+
+                    var Token = TokenService.GenerateToken(LoginUser);
+
+                    LoginRequestResponse loginRequestResponse = new LoginRequestResponse(Token);
+
+                    var response = new DefaultResponse<LoginRequestResponse>
                     {
                         Success = true,
-                        Data = "Success",
+                        Data = loginRequestResponse,
                     };
                     return response;
                 }

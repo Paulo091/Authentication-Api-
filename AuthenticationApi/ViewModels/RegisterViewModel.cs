@@ -9,6 +9,7 @@ namespace AuthenticationApi.ViewModels
     public class RegisterViewModel
     {
         public string Email { get; set; }
+        public int Role { get; set; }
         public string Password { get; set; }
         [Compare("Password", ErrorMessage ="Password and Confirmation Password not match")]
         public string ConfirmPassword { get; set; }

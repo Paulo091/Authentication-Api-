@@ -7,6 +7,6 @@ namespace AuthenticationApi.Settings
 {
     public class SecretKeyJWT
     {
-        public static string SecretKey = "mySecretKey";
+        public static string SecretKey = "mySecretKeymySecretKeymySecretKeymySecretKey";
     }
 }

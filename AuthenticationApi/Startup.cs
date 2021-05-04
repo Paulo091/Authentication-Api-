@@ -1,4 +1,5 @@
 using AuthenticationApi.DbContext;
+using AuthenticationApi.Models;
 using AuthenticationApi.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -66,7 +67,7 @@ namespace AuthenticationApi
          
             services.AddDbContext<AppDbContext>(x => x.UseSqlServer(connectionString));
 
-            services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
+            services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

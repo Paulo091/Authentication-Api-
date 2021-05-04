@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AuthenticationApi.Models
+namespace AuthenticationApi.Models.RequestResponses
 {
     public class DefaultResponse <T>
     {
