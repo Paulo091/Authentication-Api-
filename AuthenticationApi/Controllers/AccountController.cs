@@ -1,7 +1,10 @@
-﻿using AuthenticationApi.Models;
+﻿using AuthenticationApi.DbContext;
+using AuthenticationApi.Models;
+using AuthenticationApi.Models.Enums;
 using AuthenticationApi.Models.RequestResponses;
 using AuthenticationApi.Services;
 using AuthenticationApi.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -13,18 +16,20 @@ namespace AuthenticationApi.Controllers
 {
     [Route("[controller]")]
     [ApiController]
+    [Authorize]
     public class AccountController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
 
-        public AccountController( UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
+        public AccountController( UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, AppDbContext dbContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
         }
 
         [HttpPost("Register")]
+        [Authorize(Roles ="Admin")]
         public async Task<object> Register(RegisterViewModel user)
         {
             var msg = "";
@@ -34,7 +39,7 @@ namespace AuthenticationApi.Controllers
                 { 
                     UserName = user.Email,
                     Email = user.Email,
-                    Role = user.Role
+                    Role = ((RoleEnum)user.Role).ToString()
                 };
 
                 var createUserResult = await _userManager.CreateAsync(applicationUser, user.Password);
@@ -51,12 +56,12 @@ namespace AuthenticationApi.Controllers
 
                     return BadRequest(msg);
                 }
-
             }
             return BadRequest("");
         }
 
         [HttpPost("Login")]
+        [AllowAnonymous]
         public async Task<object> Login(LoginViewModel user)
         {
             try
@@ -70,10 +75,17 @@ namespace AuthenticationApi.Controllers
 
                 if (result.Succeeded)
                 {
+                    var currentUser = _signInManager.UserManager.Users.Where(x => x.UserName == user.Email).FirstOrDefault();
+
+                    LoginUser.Role = currentUser.Role;
 
                     var Token = TokenService.GenerateToken(LoginUser);
 
-                    LoginRequestResponse loginRequestResponse = new LoginRequestResponse(Token);
+                    await _signInManager.SignInAsync(LoginUser, isPersistent: false);
+
+
+
+                    LoginRequestResponse loginRequestResponse = new LoginRequestResponse(Token, currentUser.Role);
 
                     var response = new DefaultResponse<LoginRequestResponse>
                     {

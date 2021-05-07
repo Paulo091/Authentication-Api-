@@ -20,6 +20,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
+
+
 namespace AuthenticationApi
 {
     public class Startup
@@ -34,11 +37,6 @@ namespace AuthenticationApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
-            services.AddControllers();
-
-            services.AddCors();
-
             var key = Encoding.ASCII.GetBytes(SecretKeyJWT.SecretKey);
 
             services.AddAuthentication(x =>
@@ -47,6 +45,13 @@ namespace AuthenticationApi
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             }).AddJwtBearer(x =>
             {
+                x.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = context =>
+                    {
+                        return Task.CompletedTask;
+                    }
+                };
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = true;
                 x.TokenValidationParameters = new TokenValidationParameters()
@@ -58,6 +63,7 @@ namespace AuthenticationApi
                 };
             });
 
+            services.AddControllers();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "AuthenticationApi", Version = "v1" });
@@ -67,7 +73,9 @@ namespace AuthenticationApi
          
             services.AddDbContext<AppDbContext>(x => x.UseSqlServer(connectionString));
 
-            services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
+            services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false).AddEntityFrameworkStores<AppDbContext>();
+
+            //services.AddIdentity<ApplicationUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -83,8 +91,6 @@ namespace AuthenticationApi
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
-            app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
             app.UseAuthentication();
 
