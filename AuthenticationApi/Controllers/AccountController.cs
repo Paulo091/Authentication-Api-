@@ -21,11 +21,13 @@ namespace AuthenticationApi.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly AppDbContext _dbContext;
 
         public AccountController( UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, AppDbContext dbContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _dbContext = dbContext;
         }
 
         [HttpPost("Register")]
@@ -33,10 +35,20 @@ namespace AuthenticationApi.Controllers
         public async Task<object> Register(RegisterViewModel user)
         {
             var msg = "";
-            if (ModelState.IsValid)
+
+            if (!ModelState.IsValid)
             {
-                var applicationUser = new ApplicationUser() 
-                { 
+                return BadRequest(new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = null,
+                });
+            }
+
+            try
+            {
+                var applicationUser = new ApplicationUser()
+                {
                     UserName = user.Email,
                     Email = user.Email,
                     Role = ((RoleEnum)user.Role).ToString()
@@ -57,13 +69,110 @@ namespace AuthenticationApi.Controllers
                     return BadRequest(msg);
                 }
             }
-            return BadRequest("");
+            catch(Exception e)
+            {
+                return new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = e.Message,
+                };
+            }
+        }
+
+        [HttpDelete("DeleteUser")]
+        [Authorize(Roles = "Admin")]
+        public async Task<object> Delete(EmailUserViewModel user)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = null,
+                });
+            }
+            try
+            {
+                var result = _dbContext.Users.Where(x => x.Email == user.Email).FirstOrDefault();
+
+                if (result is null)
+                    return NotFound("User not found");
+
+                    await _userManager.DeleteAsync(result);
+
+                return new DefaultResponse<string>
+                {
+                    Success = true,
+                    Data = null,
+                };
+            }
+            catch(Exception e)
+            {
+                return new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = e.Message,
+                };
+            }
+
+        }
+
+        [HttpPut("UpdateUser")]
+        [Authorize]
+        public async Task<object> Update(RegisterViewModel userToUpdate)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = null,
+                });
+            }
+            try
+            {
+                var userResult = _userManager.Users.Where(x => x.Email == userToUpdate.Email).FirstOrDefault();
+
+                if (userResult is null)
+                    return NotFound("Invalid User");
+
+                userResult.Role = ((RoleEnum)userToUpdate.Role).ToString();
+                
+                var result = await _userManager.UpdateAsync(userResult);
+
+                await _userManager.RemovePasswordAsync(userResult);
+
+                await _userManager.AddPasswordAsync(userResult, userToUpdate.Password);
+
+                return new DefaultResponse<string>
+                {
+                    Success = true,
+                    Data = null,
+                };
+
+            }
+            catch (Exception e)
+            {
+                return new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = e.Message,
+                };
+            }
         }
 
         [HttpPost("Login")]
         [AllowAnonymous]
-        public async Task<object> Login(LoginViewModel user)
+        public async Task<object> Login(UserViewModel user)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = null,
+                });
+            }
             try
             {
                 var LoginUser = new ApplicationUser
@@ -75,7 +184,7 @@ namespace AuthenticationApi.Controllers
 
                 if (result.Succeeded)
                 {
-                    var currentUser = _signInManager.UserManager.Users.Where(x => x.UserName == user.Email).FirstOrDefault();
+                    var currentUser = _dbContext.Users.Where(x => x.UserName == user.Email).FirstOrDefault();
 
                     LoginUser.Role = currentUser.Role;
 
@@ -83,31 +192,74 @@ namespace AuthenticationApi.Controllers
 
                     await _signInManager.SignInAsync(LoginUser, isPersistent: false);
 
-
-
-                    LoginRequestResponse loginRequestResponse = new LoginRequestResponse(Token, currentUser.Role);
-
                     var response = new DefaultResponse<LoginRequestResponse>
                     {
                         Success = true,
-                        Data = loginRequestResponse,
+                        Data = new LoginRequestResponse(Token, currentUser.Role),
                     };
                     return response;
                 }
                 else
                 {
-                    var response = new DefaultResponse<string>
+                    var response = new DefaultResponse<LoginRequestResponse>
                     {
                         Success = false,
-                        Data = "Invalid Credentials",                        
+                        Data = new LoginRequestResponse(),                        
                     };
                     return Unauthorized(response);
                 }
             }
             catch(Exception e)
             {
-                return e.Message;
+                return new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = e.Message,
+                };
             }            
+        }
+
+        [HttpGet("ListUsers")]
+        [Authorize(Roles ="Admin")]
+        public object List()
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new DefaultResponse<string>
+                {
+                    Success = false,
+                    Data = null,
+                });
+            }
+
+            var users = new List<EmailUserViewModel>();
+
+            try
+            {
+                foreach (var currentUser in _dbContext.Users)
+                {
+                    users.Add(
+                        new EmailUserViewModel
+                        {
+                            Email = currentUser.Email
+                        }
+                    );
+                }
+
+                return new DefaultResponse<object>
+                {
+                    Success = true,
+                    Data = users
+                };
+
+            }catch(Exception e)
+            {
+                return new DefaultResponse<object>
+                {
+                    Success = false,
+                    Data = e.Message
+                };
+            }
         }
 
     }

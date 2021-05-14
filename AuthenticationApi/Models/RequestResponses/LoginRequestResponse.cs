@@ -15,5 +15,10 @@ namespace AuthenticationApi.Models.RequestResponses
             this.JwtToken = JwtToken;
             this.Role = Role;
         }
+
+        public LoginRequestResponse()
+        {
+
+        }
     }
 }

@@ -5,9 +5,8 @@ using System.Threading.Tasks;
 
 namespace AuthenticationApi.ViewModels
 {
-    public class UserViewModel
+    public class EmailUserViewModel
     {
         public string Email { get; set; }
-        public string Password { get; set; }
     }
 }
